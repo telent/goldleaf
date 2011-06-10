@@ -1,0 +1,192 @@
+h1. What is this for?
+
+bq. As a Daniel, I would like to be able to automatically create
+Debian-based systems which are identical to each other: specifically,
+which have exactly the same versions of exactly the same packages as
+each other, and the same configuration files driving them.
+
+There are certain provisos here which make @dd@ not the right answer
+
+* I want version history for updates - configuration changes on my
+  part, or new packages which need installing when business
+  requirements change, or new distro packages (security updates and
+  the like) from Debian.  
+
+* per-host configuration like IP addresses or the UUIDs of parttion
+  names, obviously, are expected to vary.
+
+* "golden images" simply "just aren't cool":http://madstop.com/2009/02/04/golden-image-or-foil-ball/
+
+h2. Chef?  Puppet?  cfengine?
+
+I spent a little while looking at things like Chef and Puppet, but
+they don't (as far as I can see) meet the requirement that the same
+_versions_ of packages are installed as I asked for, and anyone who's
+been running Debian boxes for a while will know that even the most
+innocuous of patchlevel releases can sometimes contain unexpected
+surprises.  And given that they don't perform that essential
+requirement, the overhead in learning and installing either of them
+when I'm not using them to maintain a network of 100+ hosts seems a
+bit excessive.  
+
+h2. Some assumptions and caveats
+
+* that you have an existing host already that does more or less what
+  you want to do, but which has been installed piecemeal.  I will
+  refer to this as the donor system.  If this is not you and you're
+  starting from scratch, you will probably have to create various
+  files in @/etc@ by hand.
+
+* the package version pinning depends on aptitude to get things right,
+  and has not been tested by me extensively.  It is possible that in
+  some situations you mght find yourself running aptitude install a
+  few times until things settle down and it's happy that all its ducks
+  line up, just as you do on an manually installed Debian system.
+  Once you've got it to a stable state, you can snapshot that state
+  again.
+
+* you're using git for version control or are prepared to start doing
+  so.  This is built on a recipe I had previously been using for
+  keeping @/etc@ under version control, but without using
+  "etckeeper":http://kitenet.net/~joey/code/etckeeper/ because
+  etckeeper wasn't available - or at least, wasn't known to me - when
+  I started down this road.  My approach is simply to never edit a
+  file in @/etc@ directly, but to make a git-controlled copy in
+  @/usr/local/master@ then run a make invocation to copy into @/etc@
+  when done.  If you prefer not to, you could use this @Makefile@ just
+  for initial image creation alone and then keep @/etc@ by hand.  You
+  could _probably_ make it play nice with etckeeper too, but I haven't
+  had a need to yet.
+
+* you have an apt proxy.  The internet appreciates careful caching.
+
+h2. The how-it-works handwave
+
+# it makes a base system hierarchy using "debootstrap":http://packages.debian.org/search?keywords=debootstrap
+
+# it copies all your package selection data and config files into
+  @/usr/local/master/template@ on the target system, along with a
+  Makefile that will install all the packages and files so specified
+  into their rightful places.
+
+# it makes a disk image from that with @dd@ and @kpartx@ and @mkfs@ and
+  loopback mounts and stuff
+
+# it makes the image bootable with "extlinux":http://syslinux.zytor.com/wiki/index.php/EXTLINUX.  I'm not going to say
+  anything nasty about Grub, because the problem might just be that
+  I'm too stupid to understand it.  But I had no such trouble with
+  extlinux, which is small, wonderful, and exactly perfect for the
+  task of finding a kernel and initrd on an ext{2,3,4}fs disk and
+  making it boot.  And it has documentation.
+
+# when you boot the image for the first time, a script in
+  @/etc/rc.local@ does the magic referred to above to get everything
+  installed and all your files from @/usr/local/master/template@ to
+  @/@.  We defer this operation to first boot instead of doing it when
+  the image is created, because it makes the image itself smaller - if
+  you create the image locally and upload to a cloud host, better to
+  have the package downloads happen directly on the cloud host than to do
+  it locally then upload a much fatter image over the slow side of a
+  consumer adsl line.
+
+
+h2. How to use it
+
+# Take the Makefile.  Put it in a nice new empty directory somewhere.
+
+# edit the definition of PROXY to point to your local apt-proxy service
+
+# Make a subdirectory named 'template', and unpack the important bits
+of your donor system's @/etc@ and anything else you want to be
+automatically installed.  Do include: config files that you've changed
+from the defaults that debian installed.  Don't include: anything that
+came out of a package and that you haven't changed since. If you don't
+have a donor system, you may need some trial and error to work out
+what you need here: @hosts@, @fstab@, @passwd@, @group@, @shadow@
+and @apt/sources.list@ come to mind, but there may be others I
+haven't thought of.
+
+# on the donor system, run
+
+<pre>
+# debconf-get-selections > debconf-selections.list
+# aptitude -q -F "%?p=%?V %M" --disable-columns search \~i  > installed-packages.list
+</pre>
+
+and copy the files resulting to @template/etc/@.
+
+# run @make disk.img@.  This creates a qemu-compatible disk image of a
+  debian base image, plus the gubbins in @/usr/local/master@ that make
+  it install the full system when it boots up
+
+# boot the resulting image in kvm locally (there's a @make kvm@ target
+  which may or may not fit your needs), or by copying it to your
+  "favourite kvm cloud provider":http://www.elastichosts.com (other
+  cloud providers, doubtless, exist) and starting it there.
+
+# wait for it to install everything.  It shouldn't need much
+  interaction but may need supervision as some packages insist on
+  stopping and asking questions interactively despite my best efforts.
+
+# reboot
+
+You're done.  Well, nearly.
+
+I strongly suggest that you then log into the freshly booted image
+again (you did install a valid @/etc/passwd@ somehow, didnt you?) and
+run
+
+<pre>
+# aptitude update && aptitude upgrade
+</pre>
+
+as root.  If this triggers the download of more or newer packages, do it
+repeatedly until the package state settles down, then do
+
+<pre>
+# cd /usr/local/master && make show-upgraded save-upgraded sync
+</pre>
+to record the new package state.  
+
+This time you're definitely done.  But I do further commend to you,
+unless you already have a better way to manage @/etc@, the practice of
+continuing to use @/usr/local/master/template/etc@ as a
+version-controlled repository for it.  There are two rules
+
+* to make changes to files in @/etc@, first copy them (if necessary)
+  to @/usr/local/master/template/etc@, edit the copy, @git commit@ the
+  change, and run @make sync@ when done.  Files in
+  @/usr/local/master/template/@ will overwrite corresponding fies in
+  @/@ whenever you run @make sync@
+
+* after upgrading or installing Debian packages, run 
+<pre>
+# cd /usr/local/master && make show-upgraded save-upgraded 
+</pre>
+to record the new package state.  Installed package versions and
+debconf configuration will be overridden by the data in
+@template/etc/*.list@ whenever you run @make sync@
+
+Caution: @make sync@ is a *one-way sync* - it will overwrite files in
+the target, and without warning, if they have been changed more
+recently than their counterparts in the repository.
+
+h2. Further customization
+
+There are a bunch of tweakables.  If you want to create filesystems
+(other than the root) on the target system, write a file
+@firstboot-mkfs.sh@ which does that.  If you want to do other one-time
+installation after package installation, you can put that in
+@firstboot-postinstall.sh@.  To change the hostname, base Debian
+release, or disk layout, edit the definitions at the top of the
+Makefile.
+
+The @template@ directory is not limited to use with @/etc@ - you can
+put user dotfiles in @template/home/foo/@ and whatever other uses come
+to mind, provided you (and the user) are happy that they will
+overwrite whatever changes are made on the filesystem each time you
+sync
+
+It's only been tested with Debian squeeze.  It should work with other
+versions, if they are new enough.  It may work with Ubuntu.
+
