@@ -92,19 +92,25 @@ h2. The how-it-works handwave
 
 h2. How to use it
 
-# Take the Makefile.  Put it in a nice new empty directory somewhere.
+# Create a new directory somewhere which will contain all your configuration.
+Create a @Makefile@ in it with the lines
 
-# edit the definition of PROXY to point to your local apt-proxy service
+bc.
+PROXY=http://your.apt.proxy.server/
+include /path/to/goldleaf/goldleaf.mk
 
 # Make a subdirectory named 'template', and unpack the important bits
 of your donor system's @/etc@ and anything else you want to be
 automatically installed.  Do include: config files that you've changed
 from the defaults that debian installed.  Don't include: anything that
 came out of a package and that you haven't changed since. If you don't
-have a donor system, you may need some trial and error to work out
-what you need here: @hosts@, @fstab@, @passwd@, @group@, @shadow@
-and @apt/sources.list@ come to mind, but there may be others I
-haven't thought of.
+have a donor system, this may involve some trial and error to work out
+what you need here: you will get the standard Debian files for
+@passwd@, @group@, and @shadow@ (i.e. without any valid user accounts)
+functionally empty files for @hosts@ and @fstab@, and an
+@apt/sources.list@ which has PROXY written into it - fine if you are
+deploying on the same network as your proxy service, less so
+otherwise.
 
 # on the donor system, run
 
