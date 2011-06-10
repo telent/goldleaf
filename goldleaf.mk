@@ -56,7 +56,7 @@ root/firstboot-mkfs.sh: firstboot-mkfs.sh
 root/firstboot-postinstall.sh: firstboot-postinstall.sh
 	cp $< $@
 
-root/firstboot.sh: root root/firstboot-mkfs.sh root/firstboot-postinstall.sh firstboot.sh $(shell find $(TEMPLATE)/ -type f )
+root/firstboot.sh: root root/firstboot-mkfs.sh root/firstboot-postinstall.sh firstboot.sh $(shell find template/ -type f )
 	-rm -rf root/usr/local/master
 	mkdir -p root/usr/local/master
 	git gc
@@ -112,22 +112,22 @@ else
 endif
 
 sync: 
-	rsync -av --exclude \*~ --exclude ./Makefile `pwd`/$(TEMPLATE)/ /
+	rsync -av --exclude \*~ --exclude ./Makefile `pwd`/template/ /
 	(cd / && . $(CURDIR)/permissions.sh)
 	for i in `seq 10 250` ; do echo "10.0.0.$$i host$$i" ;done >/etc/more_hosts
-	insserv $(shell for i in $(TEMPLATE)/etc/init.d/*; do basename $$i  ;done)
+	insserv $(shell for i in template/etc/init.d/*; do basename $$i  ;done)
 	aptitude $(AP) -y update
-	/sbin/restore-package-versions.sh $(TEMPLATE)/etc/installed-packages.list
-	debconf-set-selections $(TEMPLATE)/etc/debconf-selections.list
+	/sbin/restore-package-versions.sh template/etc/installed-packages.list
+	debconf-set-selections template/etc/debconf-selections.list
 	aptitude $(AP) -y  -o Dpkg::Options::="--force-confdef" install 
 
 show-upgraded:
 	/sbin/save-package-versions.sh installed-packages.list
 	debconf-get-selections > debconf-selections.list
-	diff -u installed-packages.list $(TEMPLATE)/etc/installed-packages.list ||true
-	diff -u debconf-selections.list $(TEMPLATE)/etc/debconf-selections.list ||true
+	diff -u installed-packages.list template/etc/installed-packages.list ||true
+	diff -u debconf-selections.list template/etc/debconf-selections.list ||true
 
 save-upgraded:
-	cp installed-packages.list $(TEMPLATE)/etc/installed-packages.list
-	cp  debconf-selections.list $(TEMPLATE)/etc/debconf-selections.list
+	cp installed-packages.list template/etc/installed-packages.list
+	cp  debconf-selections.list template/etc/debconf-selections.list
 
