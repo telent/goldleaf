@@ -44,7 +44,7 @@ on it and copy the files resulting to @template/etc/@.
 # wait for it to install everything.  It won't need much interaction, but may need supervision as some packages insist on stopping and asking questions interactively despite my best efforts.
 # reboot
 
-You're done.  More or less.  But you probably want to fine-tune the package list.  Log into the freshly booted image again (you did install a valid @/etc/passwd@ somehow, didnt you?) and run any aptitude commands necessary to the packages you want to install, then run @# aptitude update && aptitude upgrade@ until the package state settles down, then do
+You're done.  More or less.  But you probably want to fine-tune the package list.  Log into the freshly booted image again (you did install a valid @/etc/passwd@ somehow, didnt you?) and run the aptitude commands to install the packages you want, then run @# aptitude update && aptitude upgrade@ until the package state settles down, then do
 
 @# cd /usr/local/master && make show-upgraded save-upgraded@
 
