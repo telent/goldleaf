@@ -34,12 +34,14 @@ h2. How to use it
 # @cd goldleaf-example@
 # @git remote rm origin@ # better safe than sorry
 # edit the @Makefile@ - you will at minimum want to change @PROXY@; for other variables you can play with, see @../goldleaf/goldleaf.mk@
-# The directory @template@ is where you put the files you want to install on the target system - if you have an existing system to take config from, copy interesting bits of its @/etc/ here. Do include: config files that you've changed from the defaults that Debian installed.  Don't include: anything that came out of a package and that you haven't changed since. If you leave this empty, you will get the Debian default @passwd@, @group@, and @shadow@ files (i.e. without any valid user accounts), fairly rudimentary @hosts@ and @fstab@ files, and an @apt/sources.list@ which has @PROXY@ written into it - fine if you are deploying on the same network as your proxy service, less so otherwise.
+# The directory @template@ is where you put the files you want to install on the target system - if you have an existing system to take config from, copy interesting bits of its @/etc/@ into @template/etc@ here. Do include: config files that you've changed from the defaults that Debian installed.  Don't include: anything that came out of a package and that you haven't changed since. If you leave this empty, you will get the Debian default @passwd@, @group@, and @shadow@ files (i.e. without any valid user accounts), fairly rudimentary @hosts@ and @fstab@ files, and an @apt/sources.list@ which has @PROXY@ written into it - fine if you are deploying on the same network as your proxy service, less so otherwise.
 # on the donor system, run
+
 <pre>
 # debconf-get-selections > debconf-selections.list
 # aptitude -q -F "%?p=%?V %M" --disable-columns search \~i  > installed-packages.list
 </pre>
+
 and copy the files resulting to @template/etc/@.
 # run @make disk.img@.  This creates a qemu-compatible disk image of a Debian base image, plus the gubbins in @/usr/local/master@ that make it install the full system when it boots up
 # boot the resulting image in kvm: either locally (there's a @make kvm@ target which may or may not fit your needs), or by copying it to your  "favourite kvm cloud provider":http://www.elastichosts.com (other cloud providers, doubtless, exist) and starting it there.
