@@ -1,104 +1,47 @@
 h1. What is this for?
 
-bq. As a Daniel, I would like to be able to automatically create
-Debian-based systems which are identical to each other: specifically,
-which have exactly the same versions of exactly the same packages as
-each other, and the same configuration files driving them.
+Goldleaf is a tool for creating consistent and repeatable KVM Debian system images in which the packages installed, the versions of each package, and the answers to "debconf" configuration questions are specified precisely.
 
-There are certain provisos here which make @dd@ not the right answer
+The package manifest and configuration files are text-based and are intended to be kept under Git version control.
 
-* I want version history for updates - configuration changes on my
-  part, or new packages which need installing when business
-  requirements change, or new distro packages (security updates and
-  the like) from Debian.  
+The name 'goldleaf' comes from the article "Golden Image or Foil
+Ball":http://madstop.com/2009/02/04/golden-image-or-foil-ball/ by Luke
+Kanies.  On which note: it is unclear to me whether he would see this
+script as a good thing or as a bad thing, but I would argue that even
+if you reduce the number of images under your control to a single
+"stem cell" image, being able to recreate (any current or previous
+version of) that image on-demand is just as valuable as being able to
+recreate (any current or previous version of) any other application.
 
-* per-host configuration like IP addresses or the UUIDs of parttion
-  names, obviously, are expected to vary.
+h2. What does it do?
 
-* "golden images" simply "just aren't cool":http://madstop.com/2009/02/04/golden-image-or-foil-ball/
+# it makes a base system hierarchy using "debootstrap":http://packages.debian.org/search?keywords=debootstrap
+# it copies all your package selection data and config files into @/usr/local/master/template@ on the target system, along with a  Makefile that will install all the packages and files so specified into their rightful places.
+# it makes a disk image from that with @dd@ and @kpartx@ and @mkfs@ and loopback mounts and stuff
+# it makes the image bootable with "extlinux":http://syslinux.zytor.com/wiki/index.php/EXTLINUX.  I'm not going to say anything nasty about Grub, because the problem might just be that I'm too stupid to understand it.  But I had no such trouble with extlinux,which is small, wonderful, and exactly perfect for the task of finding a kernel and initrd on an ext{2,3,4}fs disk and making it boot.  And it has documentation.
+# when you boot the image for the first time, a script in @/etc/rc.local@ does the magic referred to above to get everything installed and all your files from @/usr/local/master/template@ to @/@.  We defer this operation to first boot instead of doing it when the image is created, because it makes the image itself smaller - if you create the image locally and upload to a cloud host, better to have the package downloads happen directly on the cloud host than to do it locally then upload a much fatter image over the slow side of a consumer adsl line.
 
-h2. Chef?  Puppet?  cfengine?
-
-I spent a little while looking at things like Chef and Puppet, but
-they don't (as far as I can see) meet the requirement that the same
-_versions_ of packages are installed as I asked for, and anyone who's
-been running Debian boxes for a while will know that even the most
-innocuous of patchlevel releases can sometimes contain unexpected
-surprises.  And given that they don't perform that essential
-requirement, the overhead in learning and installing either of them
-when I'm not using them to maintain a network of 100+ hosts seems a
-bit excessive.  
 
 h2. Some assumptions and caveats
 
-* that you have an existing host already that does more or less what
-  you want to do, but which has been installed piecemeal.  I will
-  refer to this as the donor system.  If this is not you and you're
-  starting from scratch, you will probably have to create various
-  files in @/etc@ by hand.
+* that you're using Git for version control, or are prepared to start doing so.  This is built on a recipe I had previously been using for  keeping @/etc@ under version control, but without using "etckeeper":http://kitenet.net/~joey/code/etckeeper/ because  etckeeper wasn't available - or at least, wasn't known to me - when I started down this road.  My approach is simply to never edit a file in @/etc@ directly, but to make a git-controlled copy in @/usr/local/master@ then run a make invocation to copy into @/etc@ when done.  If you prefer not to, you could use this @Makefile@ just for initial image creation alone and then keep @/etc@ by hand.  You could _probably_ make it play nice with etckeeper too, but I haven't had a need to yet.
 
-* the package version pinning depends on aptitude to get things right,
-  and has not been tested by me extensively.  It is possible that in
-  some situations you mght find yourself running aptitude install a
-  few times until things settle down and it's happy that all its ducks
-  line up, just as you do on an manually installed Debian system.
-  Once you've got it to a stable state, you can snapshot that state
-  again.
+* that you have some reasonable way to determine which are the packages you need.  Either you can copy a list from an existing host that does more or less what you want to do, or you can manually install stuff on an "empty" goldfoil host and then take the package list when you're happy with it.
 
-* you're using git for version control or are prepared to start doing
-  so.  This is built on a recipe I had previously been using for
-  keeping @/etc@ under version control, but without using
-  "etckeeper":http://kitenet.net/~joey/code/etckeeper/ because
-  etckeeper wasn't available - or at least, wasn't known to me - when
-  I started down this road.  My approach is simply to never edit a
-  file in @/etc@ directly, but to make a git-controlled copy in
-  @/usr/local/master@ then run a make invocation to copy into @/etc@
-  when done.  If you prefer not to, you could use this @Makefile@ just
-  for initial image creation alone and then keep @/etc@ by hand.  You
-  could _probably_ make it play nice with etckeeper too, but I haven't
-  had a need to yet.
+* the package version pinning depends on aptitude to get things right, and has not been tested by me extensively.  It is possible that in some situations you mght find yourself running aptitude install a few times until things settle down and it's happy that all its ducks line up, just as you do on an manually installed Debian system. Once you've got it to a stable state, you can snapshot that state again.
 
 * you have an apt proxy.  The internet appreciates careful caching.
-
-h2. The how-it-works handwave
-
-# it makes a base system hierarchy using "debootstrap":http://packages.debian.org/search?keywords=debootstrap
-
-# it copies all your package selection data and config files into
-  @/usr/local/master/template@ on the target system, along with a
-  Makefile that will install all the packages and files so specified
-  into their rightful places.
-
-# it makes a disk image from that with @dd@ and @kpartx@ and @mkfs@ and
-  loopback mounts and stuff
-
-# it makes the image bootable with "extlinux":http://syslinux.zytor.com/wiki/index.php/EXTLINUX.  I'm not going to say
-  anything nasty about Grub, because the problem might just be that
-  I'm too stupid to understand it.  But I had no such trouble with
-  extlinux, which is small, wonderful, and exactly perfect for the
-  task of finding a kernel and initrd on an ext{2,3,4}fs disk and
-  making it boot.  And it has documentation.
-
-# when you boot the image for the first time, a script in
-  @/etc/rc.local@ does the magic referred to above to get everything
-  installed and all your files from @/usr/local/master/template@ to
-  @/@.  We defer this operation to first boot instead of doing it when
-  the image is created, because it makes the image itself smaller - if
-  you create the image locally and upload to a cloud host, better to
-  have the package downloads happen directly on the cloud host than to do
-  it locally then upload a much fatter image over the slow side of a
-  consumer adsl line.
 
 
 h2. How to use it
 
-# Create a new directory somewhere which will contain all your configuration.
-Create a @Makefile@ in it with the lines
-
-bc.
-PROXY=http://your.apt.proxy.server/
-include /path/to/goldleaf/goldleaf.mk
-
+# @git clone git://github.com/telent/goldleaf.git@
+# @(cd goldleaf && make install)@ 
+# @git clone git://github.com/telent/goldleaf-example.git@
+# @cd goldleaf-example@
+# @git remote rm origin@ # better safe than sorry
+# have a nose around.  There should be a Makefile in which you can see various configuration variables.  There should be a directory @template@ which contains files you want to install on the target system.  There are a couple of other scripts that are executed when the target system boots.  You will 
+at minimum want to change @PROXY@ 
 # Make a subdirectory named 'template', and unpack the important bits
 of your donor system's @/etc@ and anything else you want to be
 automatically installed.  Do include: config files that you've changed
