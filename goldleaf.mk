@@ -4,7 +4,6 @@ RELEASE?=squeeze
 PROXY?=http://lsip.4a.telent.net:3142
 MIRROR?=$(PROXY)/ftp.debian.org/debian
 INSTALL_CONFIG?=/usr/local/master
-INSTALL_LIB?=/usr/local/lib/goldleaf
 
 # this must be in a format that works as input to sfdisk
 PARTITIONS?='1,1044,L,*\n1045,243\n1288,\n;'
