@@ -1,4 +1,5 @@
 TARGET_HOSTNAME?=golden
+TARGET_FILESYSTEM?=ext4
 RELEASE?=squeeze
 PROXY?=http://lsip.4a.telent.net:3142
 MIRROR?=$(PROXY)/ftp.debian.org/debian
@@ -102,7 +103,7 @@ root/etc/rc.local: $(GOLDLEAF_MK) Makefile root  $(INITIAL_IMAGE_TARGETS)  $(she
 	-rm -rf root$(INSTALL_CONFIG)
 	mkdir -p root$(INSTALL_CONFIG)
 	echo '127.0.0.1 localhost' > root/etc/hosts
-	echo 'proc /proc proc defaults 0 0\nLABEL=root / ext4 defaults 1 1' > root/etc/fstab
+	echo 'proc /proc proc defaults 0 0\nLABEL=root / $(TARGET_FILESYSTEM) defaults 1 1' > root/etc/fstab
 	echo $(TARGET_HOSTNAME) >root/etc/hostname
 	tar $(patsubst %,--exclude=%,$(WORK_OBJS)) -cf - . | tar -C root$(INSTALL_CONFIG) -xpf -
 	install -D $(GOLDLEAF_MK) root$(GOLDLEAF_MK)
@@ -123,9 +124,9 @@ disk.img: checkuid0 root/etc/rc.local $(GOLDLEAF_MK)
 	sfdisk -A1  qemudisk.raw
 	kpartx -a qemudisk.raw 
 	kpartx -l qemudisk.raw > partitions.tmp
-	mkfs.ext4 -L root /dev/mapper/`awk < partitions.tmp '/loop[0-9]+p1/ {print $$1}'`
+	mkfs -t $(TARGET_FILESYSTEM) -L root /dev/mapper/`awk < partitions.tmp '/loop[0-9]+p1/ {print $$1}'`
 	test -d mnt || mkdir mnt
-	mount qemudisk.raw mnt -t ext4 -o loop,offset=$(BYTES_IN_CYLINDER) 
+	mount qemudisk.raw mnt -t $(TARGET_FILESYSTEM) -o loop,offset=$(BYTES_IN_CYLINDER) 
 	tar -C root -cf - . | tar -C mnt -xpvf -
 	extlinux -S $(SECTORS) -H $(HEADS) --install mnt
 	umount mnt
