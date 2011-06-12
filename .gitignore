@@ -1,1 +1,4 @@
 example/root
+example/disk.img
+*~
+*.tmp
