@@ -1,4 +1,5 @@
 PREREQS=kpartx rsync insserv aptitude debconf-set-selections sfdisk extlinux
+INSTALL_LIB=/usr/local/lib/goldleaf
 
 .PHONEY: $(PREREQS)
 
@@ -12,4 +13,3 @@ install: all
 	test -d $(INSTALL_LIB) || mkdir $(INSTALL_LIB)
 	cp goldleaf.mk $(INSTALL_LIB)
 
-include goldleaf.mk # for $(INSTALL_LIB)
