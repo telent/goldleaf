@@ -64,7 +64,7 @@ h2. Further customization
 
 There are a bunch of tweakables.  If you want to create or mount filesystems (other than the root) on the target system, write a file @firstboot-mkfs.sh@ which does that.  If you want to do other one-time installation after package installation, you can put that in @firstboot-postinstall.sh@.  To change the hostname, base Debian release, or disk layout, add definitions at the top of the Makefile.  If you have files which need particular ownership or permissions, add them to @permissions.sh@
 
-The @template@ directory is not limited to use with @/etc@ - you can put user dotfiles in @template/home/foo/@ and whatever other uses come to mind, provided you (and the user) are happy that they will overwrite whatever changes are made on the filesystem each time you @make sync@
+The @template@ directory is not limited to use with @/etc@ - you can add stuff in @/usr/local/src@, or put user dotfiles in @template/home/foo/@, or whatever other uses come to mind, provided you (and the user) are happy that they will overwrite whatever changes are made on the filesystem each time you @make sync@
 
 It's only been tested with Debian squeeze.  It should work with other versions, if they are new enough.  It may work with Ubuntu.
 
