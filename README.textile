@@ -40,7 +40,7 @@ h2. How to use it
 @debconf-get-selections > debconf-selections.list ; aptitude -q -F "%?p=%?V %M" --disable-columns search \~i  > installed-packages.list@
 on it and copy the files resulting to @template/etc/@.
 # run @make disk.img@.  This creates a qemu-compatible disk image of a Debian base image, plus the gubbins in @/usr/local/master@ that make it install the full system when it boots up
-# boot the resulting image in kvm: either locally (there's a @make kvm@ target which may or may not fit your needs), or by copying it to your  favourite kvm cloud provider ("this is my favourite kvm cloud provider":http://www.elastichosts.com and starting it there.
+# boot the resulting image in kvm: either locally (there's a @make kvm@ target which may or may not fit your needs), or by copying it to your  favourite kvm cloud provider ("this is my favourite kvm cloud provider":http://www.elastichosts.com but you're allowed an opinion too) and starting it there.
 # wait for it to install everything.  It won't need much interaction, but may need supervision as some packages insist on stopping and asking questions interactively despite my best efforts.
 # reboot
 
