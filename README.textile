@@ -17,7 +17,7 @@ h2. What does it do?
 
 h2. Some assumptions and caveats
 
-* that you're using Git for version control, or are prepared to start doing so.  This is built on a recipe I had previously been using for  keeping @/etc@ under version control, but without using "etckeeper":http://kitenet.net/~joey/code/etckeeper/ because  etckeeper wasn't available - or at least, wasn't known to me - when I started down this road.  My approach is simply to never edit a file in @/etc@ directly, but to make a git-controlled copy in @/usr/local/master@ then run a make invocation to copy into @/etc@ when done.  If you prefer not to, you could use this @Makefile@ just for initial image creation alone and then keep @/etc@ by hand.  You could _probably_ make it play nice with etckeeper too, but I haven't had a need to yet.
+* that you're using Git for version control, or are prepared to start doing so.  This is built on a recipe I had previously been using for  keeping @/etc@ under version control, but without using "etckeeper":http://kitenet.net/~joey/code/etckeeper/ because  etckeeper wasn't available - or at least, wasn't known to me - when I started down this road.  My approach is simply to never edit a file in @/etc@ directly, but to make a git-controlled copy in @/usr/local/master@ then run a make invocation to copy into @/etc@ when done.  If you prefer not to, you could use this @Makefile@ just for initial image creation alone and then keep @/etc@ by hand.  You could _probably_ make it play nice with etckeeper too, but I haven't figured out how yet.
 
 * that you have some reasonable way to determine which are the packages you need.  Either you can copy a list from an existing host that does more or less what you want to do, or you can manually install stuff on an "empty" goldfoil host and then take the package list when you're happy with it.  If you're working from an existing system, I'm going to refer to it henceforth as the donor system.
 
@@ -33,73 +33,38 @@ h2. How to use it
 # @git clone git://github.com/telent/goldleaf-example.git@
 # @cd goldleaf-example@
 # @git remote rm origin@ # better safe than sorry
+# This git repository will be replicated onto the target system, so set up a remote now (and push to it, if necessary) that you can push to from the target.  @git remote add host ssh://`hostname``pwd`@ will probably do the trick, if you're running sshd and you do't have some other git setup that you'd prefer to use.
 # edit the @Makefile@ - you will at minimum want to change @PROXY@; for other variables you can play with, see @../goldleaf/goldleaf.mk@
 # The directory @template@ is where you put the files you want to install on the target system - if you have an existing system to take config from, copy interesting bits of its @/etc/@ into @template/etc@ here. Do include: config files that you've changed from the defaults that Debian installed.  Don't include: anything that came out of a package and that you haven't changed since. If you leave this empty, you will get the Debian default @passwd@, @group@, and @shadow@ files (i.e. without any valid user accounts), fairly rudimentary @hosts@ and @fstab@ files, and an @apt/sources.list@ which has @PROXY@ written into it - fine if you are deploying on the same network as your proxy service, less so otherwise.
-# on the donor system, run
+# you also need a package list.  If you have a donor system, run
 @debconf-get-selections > debconf-selections.list ; aptitude -q -F "%?p=%?V %M" --disable-columns search \~i  > installed-packages.list@
-and copy the files resulting to @template/etc/@.
+on it and copy the files resulting to @template/etc/@.
 # run @make disk.img@.  This creates a qemu-compatible disk image of a Debian base image, plus the gubbins in @/usr/local/master@ that make it install the full system when it boots up
-# boot the resulting image in kvm: either locally (there's a @make kvm@ target which may or may not fit your needs), or by copying it to your  "favourite kvm cloud provider":http://www.elastichosts.com (other cloud providers, doubtless, exist) and starting it there.
-# wait for it to install everything.  It shouldn't need much interaction, but may need supervision as some packages insist on stopping and asking questions interactively despite my best efforts.
+# boot the resulting image in kvm: either locally (there's a @make kvm@ target which may or may not fit your needs), or by copying it to your  favourite kvm cloud provider ("this is my favourite kvm cloud provider":http://www.elastichosts.com and starting it there.
+# wait for it to install everything.  It won't need much interaction, but may need supervision as some packages insist on stopping and asking questions interactively despite my best efforts.
 # reboot
 
-You're done.  More or less.
+You're done.  More or less.  But you probably want to fine-tune the package list.  Log into the freshly booted image again (you did install a valid @/etc/passwd@ somehow, didnt you?) and run any aptitude commands necessary to the packages you want to install, then run @# aptitude update && aptitude upgrade@ until the package state settles down, then do
 
-I strongly suggest that you then log into the freshly booted image
-again (you did install a valid @/etc/passwd@ somehow, didnt you?) and
-run
+@# cd /usr/local/master && make show-upgraded save-upgraded@
 
-<pre>
-# aptitude update && aptitude upgrade
-</pre>
+This saves the package state (don't forget to @git commit@ and @git push@) so that future image creation runs start from where you are now.
 
-as root.  If this triggers the download of more or newer packages, do it
-repeatedly until the package state settles down, then do
+This time you're definitely done.  But I do further commend to you, unless you already have a better way to manage @/etc@, the practice of continuing to use @/usr/local/master/template/etc@ as a version-controlled repository for it.  There are two rules
 
-<pre>
-# cd /usr/local/master && make show-upgraded save-upgraded sync
-</pre>
-to record the new package state.  
-
-This time you're definitely done.  But I do further commend to you,
-unless you already have a better way to manage @/etc@, the practice of
-continuing to use @/usr/local/master/template/etc@ as a
-version-controlled repository for it.  There are two rules
-
-* to make changes to files in @/etc@, first copy them (if necessary)
-  to @/usr/local/master/template/etc@, edit the copy, @git commit@ the
-  change, and run @make sync@ when done.  Files in
-  @/usr/local/master/template/@ will overwrite corresponding fies in
-  @/@ whenever you run @make sync@
+* to make changes to files in @/etc@, first copy them (if necessary)  to @/usr/local/master/template/etc@, edit the copy, @git commit@ the  change, and run @make sync@ when done.  Files in  @/usr/local/master/template/@ will overwrite corresponding files in  @/@ whenever you run @make sync@
 
 * after upgrading or installing Debian packages, run 
-<pre>
-# cd /usr/local/master && make show-upgraded save-upgraded 
-</pre>
-to record the new package state.  Installed package versions and
-debconf configuration will be overridden by the data in
-@template/etc/*.list@ whenever you run @make sync@
+@cd /usr/local/master && make show-upgraded save-upgraded@
+to record the new package state.  Installed package versions and debconf configuration will be overridden by the data in @template/etc/*.list@ whenever you run @make sync@
 
-Caution: @make sync@ is a *one-way sync* - it will overwrite files in
-the target, and without warning, if they have been changed more
-recently than their counterparts in the repository.
+Caution: @make sync@ is a *one-way sync* - it will overwrite files in the target, and without warning, if they have been changed more recently than their counterparts in the repository.
 
 h2. Further customization
 
-There are a bunch of tweakables.  If you want to create filesystems
-(other than the root) on the target system, write a file
-@firstboot-mkfs.sh@ which does that.  If you want to do other one-time
-installation after package installation, you can put that in
-@firstboot-postinstall.sh@.  To change the hostname, base Debian
-release, or disk layout, edit the definitions at the top of the
-Makefile.
+There are a bunch of tweakables.  If you want to create or mount filesystems (other than the root) on the target system, write a file @firstboot-mkfs.sh@ which does that.  If you want to do other one-time installation after package installation, you can put that in @firstboot-postinstall.sh@.  To change the hostname, base Debian release, or disk layout, add definitions at the top of the Makefile.  If you have files which need particular ownership or permissions, add them to @permissions.sh@
 
-The @template@ directory is not limited to use with @/etc@ - you can
-put user dotfiles in @template/home/foo/@ and whatever other uses come
-to mind, provided you (and the user) are happy that they will
-overwrite whatever changes are made on the filesystem each time you
-sync
+The @template@ directory is not limited to use with @/etc@ - you can put user dotfiles in @template/home/foo/@ and whatever other uses come to mind, provided you (and the user) are happy that they will overwrite whatever changes are made on the filesystem each time you @make sync@
 
-It's only been tested with Debian squeeze.  It should work with other
-versions, if they are new enough.  It may work with Ubuntu.
+It's only been tested with Debian squeeze.  It should work with other versions, if they are new enough.  It may work with Ubuntu.
 
