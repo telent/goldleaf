@@ -103,14 +103,12 @@ include /path/to/goldleaf/goldleaf.mk
 of your donor system's @/etc@ and anything else you want to be
 automatically installed.  Do include: config files that you've changed
 from the defaults that debian installed.  Don't include: anything that
-came out of a package and that you haven't changed since. If you don't
-have a donor system, this may involve some trial and error to work out
-what you need here: you will get the standard Debian files for
-@passwd@, @group@, and @shadow@ (i.e. without any valid user accounts)
-functionally empty files for @hosts@ and @fstab@, and an
-@apt/sources.list@ which has PROXY written into it - fine if you are
-deploying on the same network as your proxy service, less so
-otherwise.
+came out of a package and that you haven't changed since. If you leave
+this empty, you will get the Debian default @passwd@, @group@, and
+@shadow@ files (i.e. without any valid user accounts), fairly
+rudimentary @hosts@ and @fstab@ files, and an @apt/sources.list@ which
+has @PROXY@ written into it - fine if you are deploying on the same
+network as your proxy service, less so otherwise.
 
 # on the donor system, run
 
