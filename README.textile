@@ -4,14 +4,7 @@ Goldleaf is a tool for creating consistent and repeatable KVM Debian system imag
 
 The package manifest and configuration files are text-based and are intended to be kept under Git version control.
 
-The name 'goldleaf' comes from the article "Golden Image or Foil
-Ball":http://madstop.com/2009/02/04/golden-image-or-foil-ball/ by Luke
-Kanies.  On which note: it is unclear to me whether he would see this
-script as a good thing or as a bad thing, but I would argue that even
-if you reduce the number of images under your control to a single
-"stem cell" image, being able to recreate (any current or previous
-version of) that image on-demand is just as valuable as being able to
-recreate (any current or previous version of) any other application.
+The name 'goldleaf' comes from the article "Golden Image or Foil Ball":http://madstop.com/2009/02/04/golden-image-or-foil-ball/ by Luke Kanies.  On which note: it is unclear to me whether he would see this script as a good thing or as a bad thing, but I would argue that even if you reduce the number of images under your control to a single "stem cell" image, being able to recreate (any current or previous version of) that image on-demand is just as valuable as being able to recreate (any current or previous version of) any other application.
 
 h2. What does it do?
 
@@ -26,7 +19,7 @@ h2. Some assumptions and caveats
 
 * that you're using Git for version control, or are prepared to start doing so.  This is built on a recipe I had previously been using for  keeping @/etc@ under version control, but without using "etckeeper":http://kitenet.net/~joey/code/etckeeper/ because  etckeeper wasn't available - or at least, wasn't known to me - when I started down this road.  My approach is simply to never edit a file in @/etc@ directly, but to make a git-controlled copy in @/usr/local/master@ then run a make invocation to copy into @/etc@ when done.  If you prefer not to, you could use this @Makefile@ just for initial image creation alone and then keep @/etc@ by hand.  You could _probably_ make it play nice with etckeeper too, but I haven't had a need to yet.
 
-* that you have some reasonable way to determine which are the packages you need.  Either you can copy a list from an existing host that does more or less what you want to do, or you can manually install stuff on an "empty" goldfoil host and then take the package list when you're happy with it.
+* that you have some reasonable way to determine which are the packages you need.  Either you can copy a list from an existing host that does more or less what you want to do, or you can manually install stuff on an "empty" goldfoil host and then take the package list when you're happy with it.  If you're working from an existing system, I'm going to refer to it henceforth as the donor system.
 
 * the package version pinning depends on aptitude to get things right, and has not been tested by me extensively.  It is possible that in some situations you mght find yourself running aptitude install a few times until things settle down and it's happy that all its ducks line up, just as you do on an manually installed Debian system. Once you've got it to a stable state, you can snapshot that state again.
 
@@ -40,44 +33,20 @@ h2. How to use it
 # @git clone git://github.com/telent/goldleaf-example.git@
 # @cd goldleaf-example@
 # @git remote rm origin@ # better safe than sorry
-# have a nose around.  There should be a Makefile in which you can see various configuration variables.  There should be a directory @template@ which contains files you want to install on the target system.  There are a couple of other scripts that are executed when the target system boots.  You will 
-at minimum want to change @PROXY@ 
-# Make a subdirectory named 'template', and unpack the important bits
-of your donor system's @/etc@ and anything else you want to be
-automatically installed.  Do include: config files that you've changed
-from the defaults that debian installed.  Don't include: anything that
-came out of a package and that you haven't changed since. If you leave
-this empty, you will get the Debian default @passwd@, @group@, and
-@shadow@ files (i.e. without any valid user accounts), fairly
-rudimentary @hosts@ and @fstab@ files, and an @apt/sources.list@ which
-has @PROXY@ written into it - fine if you are deploying on the same
-network as your proxy service, less so otherwise.
-
+# edit the @Makefile@ - you will at minimum want to change @PROXY@; for other variables you can play with, see @../goldleaf/goldleaf.mk@
+# The directory @template@ is where you put the files you want to install on the target system - if you have an existing system to take config from, copy interesting bits of its @/etc/ here. Do include: config files that you've changed from the defaults that Debian installed.  Don't include: anything that came out of a package and that you haven't changed since. If you leave this empty, you will get the Debian default @passwd@, @group@, and @shadow@ files (i.e. without any valid user accounts), fairly rudimentary @hosts@ and @fstab@ files, and an @apt/sources.list@ which has @PROXY@ written into it - fine if you are deploying on the same network as your proxy service, less so otherwise.
 # on the donor system, run
-
 <pre>
 # debconf-get-selections > debconf-selections.list
 # aptitude -q -F "%?p=%?V %M" --disable-columns search \~i  > installed-packages.list
 </pre>
-
 and copy the files resulting to @template/etc/@.
-
-# run @make disk.img@.  This creates a qemu-compatible disk image of a
-  debian base image, plus the gubbins in @/usr/local/master@ that make
-  it install the full system when it boots up
-
-# boot the resulting image in kvm locally (there's a @make kvm@ target
-  which may or may not fit your needs), or by copying it to your
-  "favourite kvm cloud provider":http://www.elastichosts.com (other
-  cloud providers, doubtless, exist) and starting it there.
-
-# wait for it to install everything.  It shouldn't need much
-  interaction but may need supervision as some packages insist on
-  stopping and asking questions interactively despite my best efforts.
-
+# run @make disk.img@.  This creates a qemu-compatible disk image of a Debian base image, plus the gubbins in @/usr/local/master@ that make it install the full system when it boots up
+# boot the resulting image in kvm: either locally (there's a @make kvm@ target which may or may not fit your needs), or by copying it to your  "favourite kvm cloud provider":http://www.elastichosts.com (other cloud providers, doubtless, exist) and starting it there.
+# wait for it to install everything.  It shouldn't need much interaction, but may need supervision as some packages insist on stopping and asking questions interactively despite my best efforts.
 # reboot
 
-You're done.  Well, nearly.
+You're done.  More or less.
 
 I strongly suggest that you then log into the freshly booted image
 again (you did install a valid @/etc/passwd@ somehow, didnt you?) and
