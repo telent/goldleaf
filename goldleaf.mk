@@ -3,6 +3,9 @@ TEMPLATE=template
 RELEASE=squeeze
 PROXY=http://lsip.4a.telent.net:3142
 MIRROR=$(PROXY)/ftp.debian.org/debian
+INSTALL_CONFIG=/usr/local/master
+INSTALL_LIB=/usr/local/lib/goldleaf
+WORK_OBJS=root disk.img qemudisk.raw firsttimeboot.sh partitions.dat extlinux.conf
 
 # this must be in a format that works as input to sfdisk
 PARTITIONS='1,1044,L,*\n1045,243\n1288,\n;'
@@ -13,7 +16,15 @@ PARTITIONS='1,1044,L,*\n1045,243\n1288,\n;'
 # segment exceeding 1GB
 KVM_OPTS= -m 2048  -k en-gb -net nic,model=e1000 -net  tap,ifname=tap0,vlan=0,script=no -net nic,model=e1000,vlan=1 -net  tap,ifname=tap1,script=no,vlan=1
 
-all: checkuid0 disk.img
+# our concession to user-friendliness
+nodefault:
+	@echo "No default target set: please read docs or see $(lastword $(MAKEFILE_LIST)) for valid targets"
+
+goldleaf-install:
+	test -d $(INSTALL_LIB) || mkdir $(INSTALL_LIB)
+	cp $(lastword $(MAKEFILE_LIST)) $(INSTALL_LIB)
+
+disk: checkuid0 disk.img
 
 checkuid0:
 	[ `id -u` = 0 ] 
@@ -29,6 +40,7 @@ set -e
 PATH=/usr/sbin:/sbin:/bin:/usr/bin
 dhclient eth0
 ifconfig lo 127.0.0.1 up
+# use netcat to find out whether the apt proxy setting is still valid
 ( echo "GET /" | nc $$(echo $(PROXY)| awk -F/ '{sub(":"," ",$$3);print $$3}')  ) && QEMU=1
 export QEMU
 test -f /firstboot-mkfs.sh && . /firstboot-mkfs.sh
@@ -36,7 +48,7 @@ make -C /usr/local/master sync
 test -f /firstboot-postinstall.sh && . /firstboot-postinstall.sh
 endef
 export FIRSTTIMEBOOT
-firstboot.sh: Makefile
+root/firstboot.sh: Makefile
 	@echo "$$FIRSTTIMEBOOT" >$@
 	chmod +x $@
 
@@ -47,7 +59,7 @@ LABEL linux
   APPEND ro root=/dev/sda1 initrd=/initrd.img
 endef
 export  EXTLINUXCONF
-extlinux.conf: Makefile
+root/extlinux.conf: Makefile
 	@echo "$$EXTLINUXCONF" >$@
 
 root/firstboot-mkfs.sh: firstboot-mkfs.sh
@@ -56,29 +68,25 @@ root/firstboot-mkfs.sh: firstboot-mkfs.sh
 root/firstboot-postinstall.sh: firstboot-postinstall.sh
 	cp $< $@
 
-root/firstboot.sh: root root/firstboot-mkfs.sh root/firstboot-postinstall.sh firstboot.sh $(shell find template/ -type f )
-	-rm -rf root/usr/local/master
-	mkdir -p root/usr/local/master
-	git gc
-	(find .git && git ls-files) | \
-	    cpio -p --make-directories  root/usr/local/master
+root/etc/rc.local: Makefile root root/firstboot-mkfs.sh root/firstboot-postinstall.sh root/firstboot.sh root/extlinux.conf  $(shell find template/ -type f )
+	-rm -rf root$(INSTALL_CONFIG)
+	mkdir -p root$(INSTALL_CONFIG)
+	tar $(patsubst %,--exclude=%,$(WORK_OBJS)) -cf - . | tar -C root$(INSTALL_CONFIG) -xpvf -
 	echo '127.0.0.1 localhost' > root/etc/hosts
+	echo 'proc /proc proc defaults 0 0\nLABEL=root / ext4 defaults 1 1' > root/etc/fstab
 	echo $(TARGET_HOSTNAME) >root/etc/hostname
-	-rm root/etc/udev/rules.d/70-persistent-net.rules
-	cp firstboot.sh $@
-	# this needs to exist at package installation time
-	touch root/etc/default/roles
-	echo 'test -x /firstboot.sh && sh /firstboot.sh && chmod 444 /firstboot.sh\ntrue' > root/etc/rc.local
+	test -f root/etc/udev/rules.d/70-persistent-net.rules && rm root/etc/udev/rules.d/70-persistent-net.rules
+	echo 'test -x /firstboot.sh && sh /firstboot.sh && chmod 444 /firstboot.sh\ntrue' > $@
 
 # qemu ignores the CHS settings in a disk image and assumes a geometry of
 # 255 heads, 63 sectors per track.  For more on this see
 #  http://ww.telent.net/2009/6/3/migrating_xen_to_kvm
 BYTES_IN_CYLINDER=$(shell expr 63 \* 255 \* 512)
 
-disk.img: root/firstboot.sh extlinux.conf Makefile
+disk.img: root/etc/rc.local Makefile
 	cp /usr/lib/syslinux/mbr.bin qemudisk.raw
 	dd if=/dev/zero of=qemudisk.raw bs=$(BYTES_IN_CYLINDER) seek=3134 count=1
-	echo $(PARTITIONS)  | sfdisk qemudisk.raw
+	echo $(PARTITIONS) | sfdisk qemudisk.raw
 	sfdisk -A1  qemudisk.raw
 	kpartx -a qemudisk.raw 
 	kpartx -l qemudisk.raw > partitions.dat
@@ -99,7 +107,7 @@ clean:
 	-umount mnt
 	-rmdir mnt
 	-kpartx -d  qemudisk.raw	
-	-rm -rf root disk.img qemudisk.raw firsttimeboot.sh partitions.dat extlinux.conf
+	-rm -rf $(WORK_OBJS)
 
 # these commands are run natively on a live host, either on first
 # boot to install all the config and packages, or at a later date to 
