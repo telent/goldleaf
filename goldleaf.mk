@@ -153,12 +153,13 @@ endif
 
 sync: 
 	rsync -av --exclude \*~   `pwd`/template/ /
+	(cd / && . $(CURDIR)/permissions.sh)
 	insserv $(patsubst template/etc/init.d/%,%,$(wildcard template/etc/init.d/*))
 	aptitude $(AP) -y update
 	/sbin/restore-package-versions.sh template/etc/installed-packages.list
 	debconf-set-selections template/etc/debconf-selections.list
 	aptitude $(AP) -y  -o Dpkg::Options::="--force-confdef" install 
-	(cd / && . $(CURDIR)/permissions.sh)
+
 
 show-upgraded:
 	/sbin/save-package-versions.sh installed-packages.list
