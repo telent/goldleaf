@@ -70,10 +70,10 @@ export SAVE_PACKAGE_VERSIONS_SH
 
 define RESTORE_PACKAGE_VERSIONS_SH
 #!/bin/sh
-list=$1
+list=$$1
 shift 
-aptitude -q -R --schedule-only install $(awk < $list '{print $1}')
-aptitude -q -R --schedule-only markauto $(awk <$list '$2=="A" {split($1,A,"=");print A[1]}')
+aptitude -q -R --schedule-only install $$(awk < $$list '{print $$1}')
+aptitude -q -R --schedule-only markauto $$(awk <$$list '$$2=="A" {split($$1,A,"=");print A[1]}')
 endef 
 export RESTORE_PACKAGE_VERSIONS_SH
 
