@@ -37,7 +37,7 @@ checkuid0:
 
 root:
 	test -d root1 || mkdir root1
-	debootstrap --variant=minbase --include=aptitude,linux-image-2.6-amd64,net-tools,isc-dhcp-client,make,rsync,netcat-traditional $(RELEASE) root1 $(MIRROR)
+	debootstrap --variant=minbase --include=aptitude,linux-image-2.6-amd64,net-tools,isc-dhcp-client,make,rsync,netcat-traditional,debconf $(RELEASE) root1 $(MIRROR)
 	mv root1 root
 
 define FIRSTTIMEBOOT
