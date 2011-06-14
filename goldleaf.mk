@@ -160,7 +160,7 @@ sync:
 
 
 show-upgraded:
-	/sbin/save-package-versions.sh installed-packages.list
+	/sbin/save-package-versions.sh > installed-packages.list
 	debconf-get-selections > debconf-selections.list
 	diff -u installed-packages.list template/etc/installed-packages.list ||true
 	diff -u debconf-selections.list template/etc/debconf-selections.list ||true
