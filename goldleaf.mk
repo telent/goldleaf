@@ -32,9 +32,6 @@ GOLDLEAF_MK=$(lastword $(MAKEFILE_LIST))
 nodefault:
 	@echo "No default target set: please read docs or see $(GOLDLEAF_MK) for valid targets"
 
-checkuid0:
-	[ `id -u` = 0 ] 
-
 root:
 	test -d root1 || mkdir root1
 	debootstrap --variant=minbase --include=aptitude,linux-image-2.6-amd64,net-tools,isc-dhcp-client,make,rsync,netcat-traditional,debconf $(RELEASE) root1 $(MIRROR)
@@ -116,7 +113,8 @@ SECTORS=63
 HEADS=255
 BYTES_IN_CYLINDER=$(shell expr $(SECTORS) \* $(HEADS) \* 512)
 
-disk.img: checkuid0 root/etc/rc.local $(GOLDLEAF_MK)
+disk.img: root/etc/rc.local $(GOLDLEAF_MK)
+	[ `id -u` = 0 ] 
 	cp /usr/lib/syslinux/mbr.bin qemudisk.raw
 	dd if=/dev/zero of=qemudisk.raw bs=$(BYTES_IN_CYLINDER) seek=3134 count=1
 	echo $(PARTITIONS) | sfdisk qemudisk.raw
