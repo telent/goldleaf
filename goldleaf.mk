@@ -150,12 +150,16 @@ else
 endif
 
 sync: 
-	rsync -av --exclude \*~   `pwd`/template/ /
-	(cd / && . $(CURDIR)/permissions.sh)
-	insserv $(patsubst template/etc/init.d/%,%,$(wildcard template/etc/init.d/*))
 	aptitude $(AP) -y update
 	/sbin/restore-package-versions.sh template/etc/installed-packages.list
 	debconf-set-selections template/etc/debconf-selections.list
+	# if template/etc/resolv.conf contains "nameserver 127.0.0.1"
+	# then we will lose name service after copying to /, because
+	# the daemon has not yet been installed.  So download first 
+	aptitude $(AP) -y -d  -o Dpkg::Options::="--force-confdef" install 
+	rsync -av --exclude \*~   `pwd`/template/ /
+	(cd / && . $(CURDIR)/permissions.sh)
+	insserv $(patsubst template/etc/init.d/%,%,$(wildcard template/etc/init.d/*))
 	aptitude $(AP) -y  -o Dpkg::Options::="--force-confdef" install 
 
 
