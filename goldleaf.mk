@@ -150,12 +150,17 @@ else
 endif
 
 sync: 
+	# we have to be annoyingly careful about the order in which we
+	# copy files from template/etc.  For example, without the
+	# correct apt/sources.list we may not be ale to find packages
+	# so we should install that before downloading - however, if
+	# template/etc/resolv.conf contains "nameserver 127.0.0.1"
+	# then we will lose name service after copying to /, because
+	# the daemon it depends on has not yet been installed.
+	if test -f template/etc/apt/sources.list ; then cp template/etc/apt/sources.list /etc/apt ;fi
 	aptitude $(AP) -y update
 	/sbin/restore-package-versions.sh template/etc/installed-packages.list
 	debconf-set-selections template/etc/debconf-selections.list
-	# if template/etc/resolv.conf contains "nameserver 127.0.0.1"
-	# then we will lose name service after copying to /, because
-	# the daemon has not yet been installed.  So download first 
 	aptitude $(AP) -y -d  -o Dpkg::Options::="--force-confdef" install 
 	rsync -av --exclude \*~   `pwd`/template/ /
 	(cd / && . $(CURDIR)/permissions.sh)
