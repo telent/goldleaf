@@ -104,7 +104,7 @@ root/etc/rc.local: $(GOLDLEAF_MK) Makefile root  $(INITIAL_IMAGE_TARGETS)  $(she
 	tar $(patsubst %,--exclude=%,$(WORK_OBJS)) -cf - . | tar -C root$(INSTALL_CONFIG) -xpf -
 	install -D $(GOLDLEAF_MK) root$(GOLDLEAF_MK)
 	rm root/etc/udev/rules.d/70-persistent-net.rules || true
-	echo 'test -x /firstboot.sh && sh /firstboot.sh && chmod 444 /firstboot.sh\ntrue' > $@
+	echo 'test -x /firstboot.sh && ( sh /firstboot.sh | tee /tmp/firstboot.log ) && chmod 444 /firstboot.sh\ntrue' > $@
 
 # qemu ignores the CHS settings in a disk image and assumes a geometry of
 # 255 heads, 63 sectors per track.  For more on this see
