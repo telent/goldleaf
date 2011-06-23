@@ -171,8 +171,8 @@ sync:
 show-upgraded:
 	/sbin/save-package-versions.sh > installed-packages.list
 	debconf-get-selections > debconf-selections.list
-	diff -u installed-packages.list template/etc/installed-packages.list ||true
-	diff -u debconf-selections.list template/etc/debconf-selections.list ||true
+	diff -u template/etc/installed-packages.list installed-packages.list ||true
+	diff -u template/etc/debconf-selections.list debconf-selections.list  ||true
 
 save-upgraded:
 	cp installed-packages.list template/etc/installed-packages.list
