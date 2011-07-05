@@ -7,6 +7,7 @@ INSTALL_CONFIG?=/usr/local/master
 
 # this must be in a format that works as input to sfdisk
 PARTITIONS?='1,1044,L,*\n1045,243\n1288,\n;'
+CYLINDERS?=3144
 
 # Options for kvm: choose to suit your mood.  
 # The live server we seek to emulate has 2+GB and two ethernet cards.
@@ -116,7 +117,7 @@ BYTES_IN_CYLINDER=$(shell expr $(SECTORS) \* $(HEADS) \* 512)
 disk.img: root/etc/rc.local $(GOLDLEAF_MK)
 	[ `id -u` = 0 ] 
 	cp /usr/lib/syslinux/mbr.bin qemudisk.raw
-	dd if=/dev/zero of=qemudisk.raw bs=$(BYTES_IN_CYLINDER) seek=3134 count=1
+	dd if=/dev/zero of=qemudisk.raw bs=$(BYTES_IN_CYLINDER) seek=$(CYLINDERS) count=1
 	echo $(PARTITIONS) | sfdisk qemudisk.raw
 	sfdisk -A1  qemudisk.raw
 	kpartx -a qemudisk.raw 
