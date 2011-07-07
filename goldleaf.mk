@@ -159,6 +159,10 @@ else
   AP=
 endif
 
+# "sync" as currently implemented is an invitation to painful
+# dependency hell and subject to planned deprecation in favour of
+# doing it all with puppet manifests, which at least let us express 
+# ordering constraints
 sync: 
 	# we have to be annoyingly careful about the order in which we
 	# copy files from template/etc.  For example, without the
