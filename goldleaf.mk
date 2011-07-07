@@ -44,6 +44,7 @@ define FIRSTTIMEBOOT
 #!/bin/sh
 set -e
 PATH=/usr/sbin:/sbin:/bin:/usr/bin
+echo "send host-name \"`cat /etc/hostname`\";"  >> /etc/dhcp/dhclient.conf
 dhclient eth0
 ifconfig lo 127.0.0.1 up
 # use netcat to find out whether the apt proxy setting is still valid
