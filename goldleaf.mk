@@ -99,7 +99,7 @@ root/firstboot-mkfs.sh: firstboot-mkfs.sh
 root/firstboot-postinstall.sh: firstboot-postinstall.sh
 	cp $< $@
 
-root/etc/rc.local: $(GOLDLEAF_MK) Makefile root  $(INITIAL_IMAGE_TARGETS)  $(shell find template/ -type f )
+root/etc/rc.local:  $(MAKEFILE_LIST) root  $(INITIAL_IMAGE_TARGETS)  $(shell find template/ -type f )
 	-rm -rf root$(INSTALL_CONFIG)
 	mkdir -p root$(INSTALL_CONFIG)
 	echo '127.0.0.1 localhost' > root/etc/hosts
