@@ -34,9 +34,7 @@ PACKAGES=aptitude linux-image-2.6-$(ARCH) net-tools isc-dhcp-client make rsync n
 GOLDLEAF_MK=$(lastword $(MAKEFILE_LIST))
 
 
-# our concession to user-friendliness
-nodefault:
-	@echo "No default target set: please read docs or see $(GOLDLEAF_MK) for valid targets"
+all: $(TARGET_HOSTNAME).img
 
 root:
 	test -d root1 || mkdir root1
@@ -122,7 +120,7 @@ SECTORS=63
 HEADS=255
 BYTES_IN_CYLINDER=$(shell expr $(SECTORS) \* $(HEADS) \* 512)
 
-disk.img: root/etc/rc.local $(GOLDLEAF_MK)
+$(TARGET_HOSTNAME).img: root/etc/rc.local
 	[ `id -u` = 0 ] 
 	cp /usr/lib/syslinux/mbr.bin qemudisk.raw
 	dd if=/dev/zero of=qemudisk.raw bs=$(BYTES_IN_CYLINDER) seek=$(CYLINDERS) count=1
@@ -137,10 +135,13 @@ disk.img: root/etc/rc.local $(GOLDLEAF_MK)
 	extlinux -S $(SECTORS) -H $(HEADS) --install mnt
 	umount mnt
 	kpartx -d  qemudisk.raw 
-	mv  qemudisk.raw disk.img
+	mv  qemudisk.raw $@
 
-kvm: disk.img
-	kvm -hda disk.img $(KVM_OPTS)
+kvm: $(TARGET_HOSTNAME).img
+	kvm -hda $(TARGET_HOSTNAME).img $(KVM_OPTS)
+
+disk.img: $(TARGET_HOSTNAME).img
+	mv $< $@
 
 clean:
 	-umount mnt
