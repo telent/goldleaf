@@ -1,5 +1,6 @@
 TARGET_HOSTNAME?=golden
 TARGET_FILESYSTEM?=ext4
+ARCH?=amd64
 RELEASE?=squeeze
 PROXY?=http://lsip.4a.telent.net:3142
 MIRROR?=$(PROXY)/ftp.debian.org/debian
@@ -15,6 +16,9 @@ CYLINDERS?=3144
 # segment exceeding 1GB
 KVM_OPTS?= -m 2048  -k en-gb -net nic,model=e1000 -net  tap,ifname=tap0,vlan=0,script=no -net nic,model=e1000,vlan=1 -net  tap,ifname=tap1,script=no,vlan=1
 
+EXTRA_PACKAGES?=
+EXTRA_INITIAL_IMAGE_TARGETS?=
+
 # ===================================================================
 
 # If you need to change anything below this point, either you're trying to 
@@ -24,8 +28,9 @@ KVM_OPTS?= -m 2048  -k en-gb -net nic,model=e1000 -net  tap,ifname=tap0,vlan=0,s
 # will treat it as a bug or a wishlist or as evidence of boneheadedness
 # (yours or mine) depending on whether I think you have a point or not
 
-WORK_OBJS=root disk.img qemudisk.raw *.tmp extlinux.conf
-INITIAL_IMAGE_TARGETS+=root/extlinux.conf root/firstboot-mkfs.sh root/firstboot-postinstall.sh root/firstboot.sh root/sbin/save-package-versions.sh root/sbin/restore-package-versions.sh
+WORK_OBJS=root *.img qemudisk.raw *.tmp extlinux.conf
+INITIAL_IMAGE_TARGETS=root/extlinux.conf root/firstboot-mkfs.sh root/firstboot-postinstall.sh root/firstboot.sh root/sbin/save-package-versions.sh root/sbin/restore-package-versions.sh $(EXTRA_INITIAL_IMAGE_TARGETS)
+PACKAGES=aptitude linux-image-2.6-$(ARCH) net-tools isc-dhcp-client make rsync netcat-traditional debconf openssh-server $(EXTRA_PACKAGES)
 GOLDLEAF_MK=$(lastword $(MAKEFILE_LIST))
 
 
@@ -35,7 +40,7 @@ nodefault:
 
 root:
 	test -d root1 || mkdir root1
-	debootstrap --variant=minbase --include=aptitude,linux-image-2.6-amd64,net-tools,isc-dhcp-client,make,rsync,netcat-traditional,debconf $(RELEASE) root1 $(MIRROR)
+	debootstrap --variant=minbase --include=`echo $(PACKAGES) | sed 's/ /,/g'` $(RELEASE) root1 $(MIRROR)
 	chroot root1 apt-key update
 	chroot root1 apt-get update
 	mv root1 root
