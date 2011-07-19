@@ -30,7 +30,7 @@ EXTRA_INITIAL_IMAGE_TARGETS?=
 
 WORK_OBJS=root *.img qemudisk.raw *.tmp extlinux.conf
 INITIAL_IMAGE_TARGETS=root/extlinux.conf root/firstboot-mkfs.sh root/firstboot-postinstall.sh root/firstboot.sh root/sbin/save-package-versions.sh root/sbin/restore-package-versions.sh $(EXTRA_INITIAL_IMAGE_TARGETS)
-PACKAGES=aptitude linux-image-2.6-$(ARCH) net-tools isc-dhcp-client make rsync netcat-traditional debconf openssh-server $(EXTRA_PACKAGES)
+PACKAGES=aptitude linux-image-2.6-$(ARCH) net-tools isc-dhcp-client make rsync netcat-traditional debconf $(EXTRA_PACKAGES)
 GOLDLEAF_MK=$(lastword $(MAKEFILE_LIST))
 
 
